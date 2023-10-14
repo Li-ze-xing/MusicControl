@@ -84,7 +84,7 @@ WSGI_APPLICATION = 'MusicControl.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # 选择数据库引擎
-        'NAME': 'jd',
+        'NAME': 'musiccontrol',
         'HOST': '172.20.4.20',
         'PORT': '3306',
         'USER': 'root',
