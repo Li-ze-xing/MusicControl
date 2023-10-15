@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>排行榜信息</title>
+</head>
+<body>
+    <h1>排行榜:</h1>
+    <ul>
+        {% for i in c %}
+            <li>{{ i.name }},{{ i.callNum }}</li>
+        {% endfor %}
+    </ul>
+
+</body>
+</html>
