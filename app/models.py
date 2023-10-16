@@ -10,7 +10,7 @@ class MyManager(models.Manager):
 
 
 # 音乐类型 ----------------------------------------------------------------------------------------
-class MusicTypeManager(MyManager):
+class MusicTypeManager(models.Manager):
     # 重写create
     def create(self, name):
         # self.model ==  Student
