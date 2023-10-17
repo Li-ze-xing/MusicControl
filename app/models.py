@@ -101,3 +101,12 @@ class User(models.Model):
 
     class Meta:
         db_table = "user"
+
+
+# 签到日期存储 ----------------------------------------------------------------------------------------
+class Sign(models.Model):
+    datatime = models.DateField()
+    user = models.ForeignKey("User",on_delete=models.CASCADE)
+
+    class Meta:
+        db_table = "sign_data"
