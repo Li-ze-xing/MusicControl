@@ -44,7 +44,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -85,7 +85,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # 选择数据库引擎
         'NAME': 'musiccontrol',
-        'HOST': '172.20.4.20',
+        'HOST': '172.10.5.208',
         'PORT': '3306',
         'USER': 'root',
         'PASSWORD': '123456',
@@ -134,3 +134,12 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+SESSION_REDIS = {
+    'host': '172.20.4.20',
+    'port': 6379,
+    'db': 0,
+    'password': '',
+    'prefix': 'session',
+    'socket_timeout': 10
+}

@@ -10,7 +10,7 @@ class MyManager(models.Manager):
 
 
 # 音乐类型 ----------------------------------------------------------------------------------------
-class MusicTypeManager(MyManager):
+class MusicTypeManager(models.Manager):
     # 重写create
     def create(self, name):
         # self.model ==  Student
@@ -30,7 +30,7 @@ class MusicType(models.Model):
 
 
 # 音乐评论 ------------------------------------------------------------------------------------------
-class MusicCommentsManager(MyManager):
+class MusicCommentsManager(models.Manager):
     # 重写create
     def create(self, comments, user_id, music_comments):
         # self.model ==  Student
@@ -45,7 +45,7 @@ class MusicComments(models.Model):
 
     comments = models.CharField(max_length=100)
 
-    user_id = models.ForeignKey("User",on_delete=models.CASCADE)
+    user_id = models.ForeignKey("User", on_delete=models.CASCADE)
     music_comments = models.ForeignKey("MusicList", on_delete=models.CASCADE)
 
     class Meta:
