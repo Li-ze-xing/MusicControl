@@ -49,11 +49,14 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # "app.middlewares.vfcode.VfcodeViewMiddleware",
+    # "app.middlewares.check_single_login.LoginViewMiddleware",
 ]
 
 # CORS_ORIGIN_ALLOW_ALL = True
-CORS_ORIGIN_ALLOW_ALL = False
-CORS_ALLOW_CREDENTIALS = True
+# CORS_ORIGIN_ALLOW_ALL = False
+# CORS_ALLOW_CREDENTIALS = True
+# SESSION_COOKIE_SECURE = True
 CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5500',  # 允许访问的源/域名
 ]
@@ -92,7 +95,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # 选择数据库引擎
         'NAME': 'musiccontrol',
-        'HOST': '172.20.4.20',
+        'HOST': '127.0.0.1',
         'PORT': '3306',
         'USER': 'root',
         'PASSWORD': '123456',
@@ -139,3 +142,25 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+SESSION_ENGINE = "redis_sessions.session"  # session存储
+SESSION_REDIS = {
+    'host': '127.0.0.1',                               # 主机地址
+    'port': 6379,                                                   # 端口
+    'db': 0,                                                            # 选择第几库
+    # 'password': '123456',                                     # 密码
+    'prefix': 'session',                                           # key
+    'socket_timeout': 10                                      # 响应超时时间
+ }
+
+#redis缓存
+CACHES={
+    "default":{
+        "BACKEND":"redis_cache.cache.RedisCache" ,#说明存储位置
+        "TIMEOUT":60,  #设置缓存时间  1.非零正整数，单位是秒2.不写，默认300秒3.None，永不过期4.0:立即过期
+        "LOCATION":"127.0.0.1:6379",
+        "OPTIONS":{
+            # "PASSWORD":"123456"
+        }
+    }
+}

@@ -1,7 +1,13 @@
+import uuid
+from django.utils import timezone
+
+from django.contrib.auth import logout
+from django.core.cache import cache
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
-from app.models import User, MusicList, MusicType
+from app.models import User, MusicList, MusicType, MusicComments, Sign
 from django.views.generic import View
+from django.core.paginator import Paginator
 
 
 # Create your views here.
@@ -18,66 +24,82 @@ class TypeView(View):
 
 
 class AssignView(View):
-    def get(self, request, tid, pid):
+    def post(self, request, mid, pid, cid):
         page_num = pid
-        print(page_num)
-        one_page_num = 10
-        start_index = (int(page_num) - 1) * one_page_num
-        end_index = start_index + one_page_num
-        assign_type = list(MusicList.objects.filter(name=tid))
-        print(assign_type)
+        per_page = cid
+        assign_type = list(MusicList.objects.all().filter(
+            music_type=MusicType.objects.get(name=mid)).values())  # [start_index:end_index])
+        paginator = Paginator(assign_type, per_page)
+        pg = paginator.page(page_num)
         assign_typedict = {
-            "assign_type": assign_type
+            "pg_con": list(pg),
+            "page_left": pg.has_previous(),
+            "page_right": pg.has_next(),
         }
         return JsonResponse(assign_typedict)
 
 
 class LookView(View):
-    def post(self, request,musicName,page):
-        query_content = musicName #request.POST.get("name")
-        page_num = page  #request.POST.get("pid")  # 获取页数信息
-        print("--------------------",musicName,page)
-        one_page_num = 10
-        start_index = (page_num - 1) * one_page_num
-        end_index = start_index + one_page_num
-        query_music = list(MusicList.objects.raw(f"select * from music_list where name like '%{query_content}%'")
-                           [start_index:end_index])
-        print("-------------------2",query_music)
+    def get(self, request, q_con, pid, cid):
+        query_content = q_con
+        page_num = pid  # 获取页数信息
+        per_page = cid
+        query_music = list(MusicList.objects.all().filter(name__contains=query_content).values())
+        paginator = Paginator(query_music, per_page)
+        pg = paginator.page(page_num)
         query_music_dict = {
-            "query_music": query_music
+            "pg_con": list(pg),
+            "page_left": pg.has_previous(),
+            "page_right": pg.has_next(),
         }
         return JsonResponse(query_music_dict)
 
 
 class CollectView(View):
-    def get(self, request, uid):
+    def post(self, request, pid, cid):
         # 现在用的传参确定用户,后续改成根据当前登录用户确定
         # user_num = request.GET.get(uid)
-        user = User.objects.get(id=uid)
-        page_num = request.POST.get("pid")  # 获取页数信息
-        one_page_num = 10
-        start_index = (page_num - 1) * one_page_num
-        end_index = start_index + one_page_num
-        user_music = list(user.music_id.all()[start_index:end_index])
-        music_list = {
-            "user_music": user_music
-        }
-        return JsonResponse(music_list)
+        # user_acc = request.session.get("account")
+        user_acc = request.POST.get("account")
+        # print("--------------------------login",request.session.get("login"))
+        # user_acc = None#"liudh"
+        if user_acc:
+            user = User.objects.get(account=user_acc)
+            page_num = pid  # 获取页数信息
+            per_page = cid
+            user_music = list(user.music_id.all().values())
+            paginator = Paginator(user_music, per_page)
+            pg = paginator.page(page_num)
+            music_list = {
+                "nickname":user.nickname,
+                "pg_con": list(pg),
+                "page_left": pg.has_previous(),
+                "page_right": pg.has_next()
+            }
+            return JsonResponse(music_list)
+        else:
+            music_list = {
+                "nickname": None
+            }
+            return JsonResponse(music_list)
 
 
 class DetailView(View):
-    def get(self, request):
-        music_name = request.GET.get("name")
-        page_num = request.POST.get("pid")  # 获取页数信息
-        one_page_num = 10
-        start_index = (page_num - 1) * one_page_num
-        end_index = start_index + one_page_num
-        music_detail = list(MusicList.objects.raw(
-            f"select * from music_list as ml join comments as mc on ml.id=mc.music_comments_id where ml.name='{music_name}'")
-                            [start_index:end_index])
+    def post(self, request, m_name, pid, cid):
+        music_name = m_name
+        page_num = pid  # 获取页数信息
+        per_page = cid
+        print("-----------------",m_name,pid,cid)
+        music = MusicList.objects.get(name=m_name)
+        music_detail = list(MusicComments.objects.select_related("user_id").filter(music_comments=int(music.id)).values())
+        paginator = Paginator(music_detail, per_page)
+        pg = paginator.page(page_num)
         music_detail_dict = {
-            "music_detail": music_detail
+            "pg_con": list(pg),
+            "page_left": pg.has_previous(),
+            "page_right": pg.has_next()
         }
+        # print("-------------------------jjj",list(pg)[0].user_id.nickname)
         return JsonResponse(music_detail_dict)
 
 
@@ -87,12 +109,259 @@ class Charts(View):
 
     def get(self, request):
         """处理GET请求，返回票数页面"""
-        info = list(MusicList.objects.all().order_by('-callNum').values())
+        info = list(MusicList.objects.all().order_by('-callNum').values())[:10]
         data = {'c': info}
-        # return render(request, 'charts.html', data)
         return JsonResponse(data)
 
+
+# YangFengYuan --------------------------------------------------------------------------------
+class Index1(View):
+    # def get(self, request):
+    #     path = request.GET.get("from")
+    #     if not path:
+    #         path = "home"
+    #     data = {
+    #         "path": path
+    #     }
+    #
+    #     response = JsonResponse(data)
+    #     return response
+
     def post(self, request):
-        """处理POST请求"""
+        print("-------------------session",request.session.get("login"))
+        # return JsonResponse({"ddd":123})
+        account = request.POST.get("account")
+        password = request.POST.get("password")
+        # nickname=request.POST.get("nickname")
+        if not account or not password:
+            data = {
+                "success": False,
+                "message": "账号或密码为空",
+            }
+            return JsonResponse(data)
+        try:
+            user = User.objects.get(account=account)
+        except User.DoesNotExist as e:
+            data = {
+                "success": False,
+                "message": "账号不存在",
+            }
+            return JsonResponse(data)
+
+        if user.password != password:
+            data = {
+                "success": False,
+                "message": "密码错误",
+            }
+            return JsonResponse(data)
+
+        data = {
+            "success": True,
+            "message": "账号密码正确",
+            "account": [user.account,user.nickname],
+        }
+        response = JsonResponse(data)
+        # 1、写session
+        request.session["account"] = user.account
+        print(request.session.get("account"))
+        token_value = str(uuid.uuid4())[:8]
+        response.set_cookie("token", token_value)
+        # 写缓存
+        cache.set(user.account, token_value, 60 * 60 * 24 * 7)
+
+        return response
+
+
+
+class Index2(View):
+    def get(self, request):
         pass
-        return HttpResponse("POST")
+
+    def post(self, request):
+        account = request.POST.get("username")
+        password = request.POST.get("password")
+        nickname = request.POST.get("nickname")
+        if not account or not password or not nickname:
+            data = {
+                "success": False,
+                "message": "账号或密码或昵称为空",
+            }
+            return JsonResponse(data, status=400)
+        try:
+            user = User.objects.create(account=account,
+                                       password=password,
+                                       nickname=nickname,
+                                       cardNum=0)
+            data = {
+                "success": True,
+                "message": "注册成功",
+            }
+            return JsonResponse(data, status=200)
+        except Exception as e:
+            print(e)
+            data = {
+                "success": False,
+                "message": "注册失败",
+            }
+            return JsonResponse(data, status=400)
+
+
+"""
+使用pillow模块：pip install pillow
+"""
+from PIL import Image, ImageDraw, ImageFont
+import random
+import io
+
+
+class Index3(View):
+    def get(self, request):
+        key = request.GET.get("key")  # register_code   login_code
+        print("----------------------key",key)
+        # 1 创建画面对象
+        width = 100
+        height = 50
+        bgcolor = (random.randrange(20, 100), random.randrange(20, 100), random.randrange(20, 100))
+        im = Image.new("RGB", (width, height), bgcolor)
+
+        # 2 创建画笔
+        draw = ImageDraw.Draw(im)
+
+        # 3 生成噪点
+        for i in range(0, 100):
+            # 绘制噪点
+            xy = (random.randrange(0, width), random.randrange(0, height))
+            fill = (random.randrange(0, 255), 255, random.randrange(0, 255))
+            # 参数1：点的位置
+            # 参数2：点的颜色
+            draw.point(xy, fill)
+
+        # 4 生成随机验证码
+        base_str = "1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPLKJHGFDSAZXCVBNM"
+        code_str = ""
+        for i in range(0, 4):
+            code_str += random.choice(base_str)
+        print("--------------code_str =", code_str)
+
+        # 5 构造字体对象
+        # 参数1：字体文件路径  C:\Windows\Fonts\AdobeArabic-Bold.otf
+        # 参数2：字体大小
+        font = ImageFont.truetype(r"C:\Users\李泽兴\AppData\Local\Microsoft\Windows\Fonts\AdobeArabic-Bold.otf", 40)
+
+        # 6 写入内容
+        # 参数1：位置
+        # 参数2：内容
+        # 参数font：字体
+        # 参数fill：颜色
+        draw.text((5, 2), code_str[0], font=font, fill=(255, random.randrange(0, 255), 255, random.randrange(0, 255)))
+        draw.text((25, 2), code_str[1], font=font, fill=(255, random.randrange(0, 255), 255, random.randrange(0, 255)))
+        draw.text((50, 2), code_str[2], font=font, fill=(255, random.randrange(0, 255), 255, random.randrange(0, 255)))
+        draw.text((75, 2), code_str[3], font=font, fill=(255, random.randrange(0, 255), 255, random.randrange(0, 255)))
+
+        # 7 释放
+        del draw
+
+        # 8 内存文件操作
+        buf = io.BytesIO()
+        im.save(buf, "png")
+
+        # 9 写入session
+        request.session[key] = code_str
+        print("Session Key:", request.session.session_key)
+        # 10 响应验证码数据
+        return HttpResponse(buf.getvalue(), "image/png")
+
+
+# GaoZeXu ------------------------------------------------------------------------------------------
+
+# 实现账户退出
+# -----------------------------gaozx
+class LogoutAccount(View):
+    def post(self, request):
+        try:
+            # 检查用户是否已经登录
+            if not request.user.is_authenticated:
+                return JsonResponse({'success': False, 'message': '您未登录'}, status=401)
+
+                # 执行登出操作
+            logout(request)
+
+            # 返回成功的响应
+            data = {
+                'success': True,
+                'message': '退出成功',
+            }
+            return JsonResponse(data)
+        except Exception as e:
+            # 添加适当的日志记录
+            print('Error in logout_account view:', str(e))
+            return JsonResponse({'success': False, 'message': '登出失败，请重试'}, status=500)
+
+
+class CheckIn(View):
+    def get(self,request):
+        try:
+            user = request.GET.get("account")  # 获取当前用户
+            info = User.objects.get(account=user)
+            data = {
+                "success":True,
+                "userinfo":info.cardNum
+            }
+            return JsonResponse(data)
+        except Exception as e:
+            print("e",e)
+            data = {
+                "success": False,
+                "userinfo": e
+            }
+            return JsonResponse(data)
+
+
+    def post(self, request):
+        try:
+            user = request.POST.get("account")  # 获取当前用户
+            today = timezone.now().date()  # 获取当前日期
+            # 检查用户今日是否登录
+            user, created = User.objects.get_or_create(account=user)
+            sign = Sign.objects.filter(user=user, datatime=today).first()  # 检查用户今日是否签到
+
+            if not sign:  # 如果用户尚未签到
+                Sign.objects.create(user=user, datatime=today)  # 创建签到记录
+                user.cardNum += 5
+                user.save()
+                data = {
+                    'success': True,
+                    'message': '签到成功，获得5张票'
+                }
+                # 增加用户的票数（假设User.cardNum是一个字段）
+                return JsonResponse(data)
+            else:
+                data = {
+                    'success': False,
+                    'message': '您已签到，无需重复操作'
+                }
+                return JsonResponse(data)  # 如果用户已经签到，返回错误消息
+        except Exception as e:
+            print("----------------",e)
+            return JsonResponse({'success': False, 'message': '服务器错误，请稍后再试'})
+
+
+
+class Relation(View):
+    def post(self, request, uer_id, musiclist_id):
+        # 找到id为的用户
+        user = User.objects.get(id=int(uer_id))
+        # 找到id为musiclist_id的音乐
+        music = MusicList.objects.get(id=int(musiclist_id))
+
+        # 将两个对象形成关系
+        user.music_id.add(music)
+
+        # 将关系数据存到第三张表中
+        # music.save()
+        return HttpResponse(f"{user}和{music}形成关系")
+
+    def delete(self,request, uer_id, musiclist_id):
+        ...
+
+
