@@ -58,11 +58,8 @@ class LookView(View):
 class CollectView(View):
     def post(self, request, pid, cid):
         # 现在用的传参确定用户,后续改成根据当前登录用户确定
-        # user_num = request.GET.get(uid)
-        # user_acc = request.session.get("account")
         user_acc = request.POST.get("account")
-        # print("--------------------------login",request.session.get("login"))
-        # user_acc = None#"liudh"
+
         if user_acc:
             user = User.objects.get(account=user_acc)
             page_num = pid  # 获取页数信息
@@ -71,7 +68,7 @@ class CollectView(View):
             paginator = Paginator(user_music, per_page)
             pg = paginator.page(page_num)
             music_list = {
-                "nickname":user.nickname,
+                "nickname": user.nickname,
                 "pg_con": list(pg),
                 "page_left": pg.has_previous(),
                 "page_right": pg.has_next()
@@ -89,9 +86,31 @@ class DetailView(View):
         music_name = m_name
         page_num = pid  # 获取页数信息
         per_page = cid
-        print("-----------------",m_name,pid,cid)
+        text = request.POST.get("text")
+        user = request.POST.get("account")
+
+        try:
+            MusicComments.objects.create(comments=text, user_id=User.objects.get(account=user),
+                                         music_comments=MusicList.objects.get(name=music_name))
+            data = {
+                "success": True,
+                "message": ""
+            }
+            return JsonResponse(data)
+        except Exception as e:
+            print("------------e", e)
+            data = {
+                "success": False,
+                "message": str(e)
+            }
+            return JsonResponse(data)
+
+    def get(self, request, m_name, pid, cid):
+        page_num = pid  # 获取页数信息
+        per_page = cid
         music = MusicList.objects.get(name=m_name)
-        music_detail = list(MusicComments.objects.select_related("user_id").filter(music_comments=int(music.id)).values())
+        music_detail = list(MusicComments.objects.select_related("user_id").filter(music_comments=int(music.id)).values(
+            'user_id__nickname', 'comments'))[::-1]
         paginator = Paginator(music_detail, per_page)
         pg = paginator.page(page_num)
         music_detail_dict = {
@@ -99,7 +118,6 @@ class DetailView(View):
             "page_left": pg.has_previous(),
             "page_right": pg.has_next()
         }
-        # print("-------------------------jjj",list(pg)[0].user_id.nickname)
         return JsonResponse(music_detail_dict)
 
 
@@ -116,23 +134,9 @@ class Charts(View):
 
 # YangFengYuan --------------------------------------------------------------------------------
 class Index1(View):
-    # def get(self, request):
-    #     path = request.GET.get("from")
-    #     if not path:
-    #         path = "home"
-    #     data = {
-    #         "path": path
-    #     }
-    #
-    #     response = JsonResponse(data)
-    #     return response
-
     def post(self, request):
-        print("-------------------session",request.session.get("login"))
-        # return JsonResponse({"ddd":123})
         account = request.POST.get("account")
         password = request.POST.get("password")
-        # nickname=request.POST.get("nickname")
         if not account or not password:
             data = {
                 "success": False,
@@ -158,7 +162,7 @@ class Index1(View):
         data = {
             "success": True,
             "message": "账号密码正确",
-            "account": [user.account,user.nickname],
+            "account": [user.account, user.nickname],
         }
         response = JsonResponse(data)
         # 1、写session
@@ -172,21 +176,14 @@ class Index1(View):
         return response
 
 
-
 class Index2(View):
     def get(self, request):
         pass
 
     def post(self, request):
-        account = request.POST.get("username")
+        account = request.POST.get("account")
         password = request.POST.get("password")
         nickname = request.POST.get("nickname")
-        if not account or not password or not nickname:
-            data = {
-                "success": False,
-                "message": "账号或密码或昵称为空",
-            }
-            return JsonResponse(data, status=400)
         try:
             user = User.objects.create(account=account,
                                        password=password,
@@ -196,14 +193,28 @@ class Index2(View):
                 "success": True,
                 "message": "注册成功",
             }
-            return JsonResponse(data, status=200)
+            return JsonResponse(data)
         except Exception as e:
-            print(e)
+            print("-------------------e3", e)
+
+            if f"Duplicate entry '{nickname}' for key 'user.nickname'" in str(e):
+                data = {
+                    "success": False,
+                    "message": "昵称重复",
+                }
+                return JsonResponse(data)
+            elif f"Duplicate entry '{account}' for key 'user.account'" in str(e):
+                data = {
+                    "success": False,
+                    "message": "用户已存在",
+                }
+                return JsonResponse(data)
+
             data = {
                 "success": False,
-                "message": "注册失败",
+                "message": "不可抗力原因注册失败",
             }
-            return JsonResponse(data, status=400)
+            return JsonResponse(data)
 
 
 """
@@ -217,7 +228,7 @@ import io
 class Index3(View):
     def get(self, request):
         key = request.GET.get("key")  # register_code   login_code
-        print("----------------------key",key)
+        print("----------------------key", key)
         # 1 创建画面对象
         width = 100
         height = 50
@@ -299,23 +310,22 @@ class LogoutAccount(View):
 
 
 class CheckIn(View):
-    def get(self,request):
+    def get(self, request):
         try:
             user = request.GET.get("account")  # 获取当前用户
             info = User.objects.get(account=user)
             data = {
-                "success":True,
-                "userinfo":info.cardNum
+                "success": True,
+                "userinfo": info.cardNum
             }
             return JsonResponse(data)
         except Exception as e:
-            print("e",e)
+            print("e", e)
             data = {
                 "success": False,
                 "userinfo": e
             }
             return JsonResponse(data)
-
 
     def post(self, request):
         try:
@@ -342,26 +352,106 @@ class CheckIn(View):
                 }
                 return JsonResponse(data)  # 如果用户已经签到，返回错误消息
         except Exception as e:
-            print("----------------",e)
             return JsonResponse({'success': False, 'message': '服务器错误，请稍后再试'})
 
 
-
 class Relation(View):
+
+    def get(self, request, uer_id, musiclist_id):
+        user = User.objects.get(account=uer_id)  # 用你的实际逻辑获取用户
+        music_list = MusicList.objects.get(name=musiclist_id)  # 用你的实际逻辑获取音乐列表
+
+        # 使用filter方法来检查关系是否存在
+        if user.music_id.filter(pk=music_list.id).exists():
+            # 关系已经建立
+            print("关系已建立")
+            data = {
+                'success': True,
+                'userNum': user.cardNum,
+                "musicNum": music_list.callNum
+            }
+            return JsonResponse(data)  # 如果用户已经签到，返回错误消息
+
+        else:
+            # 关系未建立
+            print("关系未建立")
+            data = {
+                'success': False,
+                'userNum': user.cardNum,
+                "musicNum": music_list.callNum
+            }
+            return JsonResponse(data)  # 如果用户已经签到，返回错误消息
+
     def post(self, request, uer_id, musiclist_id):
-        # 找到id为的用户
-        user = User.objects.get(id=int(uer_id))
-        # 找到id为musiclist_id的音乐
-        music = MusicList.objects.get(id=int(musiclist_id))
+        try:
+            # 找到id为的用户
+            user = User.objects.get(account=uer_id)
+            # 找到id为musiclist_id的音乐
+            music = MusicList.objects.get(name=musiclist_id)
 
-        # 将两个对象形成关系
-        user.music_id.add(music)
+            # 将两个对象形成关系
+            user.music_id.add(music)
 
-        # 将关系数据存到第三张表中
-        # music.save()
-        return HttpResponse(f"{user}和{music}形成关系")
+            # 将关系数据存到第三张表中
+            music.save()
+            data = {
+                "success": True,
+                "error": None
+            }
+            return JsonResponse(data)
+        except Exception as e:
+            data = {
+                "success": False,
+                "error": e
+            }
+            return JsonResponse(data)
 
-    def delete(self,request, uer_id, musiclist_id):
-        ...
+    def delete(self, request, uer_id, musiclist_id):
+        try:
+            # 找到id为的用户
+            user = User.objects.get(account=uer_id)
+            # 找到id为musiclist_id的音乐
+            music = MusicList.objects.get(name=musiclist_id)
+            # 解除关系
+            user.music_id.remove(music)
+            data = {
+                "success": True,
+                "error": None
+            }
+            return JsonResponse(data)
+        except Exception as e:
+            data = {
+                "success": False,
+                "error": e
+            }
+            return JsonResponse(data)
 
 
+class AddCheck(View):
+
+    def post(self, request):
+        try:
+            account = request.POST.get("account")
+            musicName = request.POST.get("musicName")
+            cards = int(request.POST.get("piao"))
+            print("---------------",account,musicName,cards)
+            user = User.objects.get(account=account)
+            user.cardNum -= cards
+            music = MusicList.objects.get(name=musicName)
+            music.callNum += cards
+
+            user.save()
+            music.save()
+            data = {
+                "success": True,
+                "info":music.callNum,
+                "error": None
+            }
+            return JsonResponse(data)
+        except Exception as e:
+            print("-----------e",e)
+            data = {
+                "success": True,
+                "error": e
+            }
+            return JsonResponse(data)

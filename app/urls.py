@@ -20,7 +20,7 @@ urlpatterns = [
 
     # YangFengYuan --------------------------------------------------------------------------------
     path("login/", views.Index1.as_view(), name="login"),
-    path("register/", views.Index2.as_view(), name="register"),
+    path("enroll/", views.Index2.as_view(), name="enroll"),
     path("code/", views.Index3.as_view(), name="code"),
 
     # GaoZeXu ------------------------------------------------------------------------------------------
@@ -29,6 +29,7 @@ urlpatterns = [
     # 签到
     path('check-in/', views.CheckIn.as_view(), name='check_in'),
     # 收藏歌曲
-    re_path('relation/(\d+)/(\d+)', views.Relation.as_view(), name="relation"),
-
+    re_path('relation/(\w+)/(\w+)', views.Relation.as_view(), name="relation"),
+    # 投票
+    re_path('add_card/', views.AddCheck.as_view(), name="add_card"),
 ]
