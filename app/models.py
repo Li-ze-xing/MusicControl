@@ -80,9 +80,9 @@ class MusicList(models.Model):
 # 用户数据 -------------------------------------------------------------------------------------------
 class UserManager(MyManager):
     # 重写create
-    def create(self, account, password, nickname, cardNum, music_id):
+    def create(self, account, password, nickname, cardNum):
         # self.model ==  Student
-        obj = self.model(account=account, password=password, nickname=nickname, cardNum=cardNum, music_id=music_id)
+        obj = self.model(account=account, password=password, nickname=nickname, cardNum=cardNum)
         obj.save()
 
         return obj

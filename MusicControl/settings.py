@@ -44,10 +44,12 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "app.middlewares.vfcode.VfcodeViewMiddleware",
+    "app.middlewares.check_single_login.LoginViewMiddleware",
 ]
 
 ROOT_URLCONF = 'MusicControl.urls'
@@ -85,7 +87,7 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',  # 选择数据库引擎
         'NAME': 'musiccontrol',
-        'HOST': '172.20.4.20',
+        'HOST': '172.10.5.208',
         'PORT': '3306',
         'USER': 'root',
         'PASSWORD': '123456',
@@ -134,3 +136,54 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+# 1111
+# # SESSION_ENGINE="redis_sessions.session"
+#
+#
+# # DJango1.x  2.x
+# # SESSION_REDIS_HOST = "101.200.140.225"
+# # SESSION_REDIS_PORT = 6379
+# # SESSION_REDIS_DB = 0
+# # SESSION_REDIS_PASSWORD = "123456"
+# # SESSION_REDIS_PREFIX = "session"
+#
+# # SESSION_REDIS={
+# #     "host":"172.20.4.20",
+# #     "port":6379,
+# #     "db":0,
+# #     # "password":"123456",
+# #     "prefix":"session",
+# #     "socket_time":10
+# # }
+#
+# #从缓存中读取存的session
+# # CACHES = {
+# #     'default': {
+# #         'BACKEND': 'django_redis.cache.RedisCache',
+# #         'LOCATION': 'redis://172.20.4.20:6379',
+# #         "OPTIONS": {
+# #             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+# #              # "PASSWORD": "yoursecret",
+# #         },
+# #     },
+# # }
+# 1111
+#
+# # REDIS_TIMEOUT=7*24*60*60
+# # CUBES_REDIS_TIMEOUT=60*60
+# # NEVER_REDIS_TIMEOUT=365*24*60*60
+
+#redis缓存
+CACHES={
+    "default":{
+        "BACKEND":"redis_cache.cache.RedisCache" ,#说明存储位置
+        "TIMEOUT":60,  #设置缓存时间  1.非零正整数，单位是秒2.不写，默认300秒3.None，永不过期4.0:立即过期
+        "LOCATION":"172.10.5.208:6379",
+        "OPTIONS":{
+            # "PASSWORD":"123456"
+        }
+    }
+}
