@@ -1,8 +1,4 @@
-import uuid
 from django.utils import timezone
-
-from django.contrib.auth import logout
-from django.core.cache import cache
 from django.shortcuts import render
 from django.http import HttpResponse, JsonResponse
 from app.models import User, MusicList, MusicType, MusicComments, Sign
@@ -84,8 +80,6 @@ class CollectView(View):
 class DetailView(View):
     def post(self, request, m_name, pid, cid):
         music_name = m_name
-        page_num = pid  # 获取页数信息
-        per_page = cid
         text = request.POST.get("text")
         user = request.POST.get("account")
 
@@ -98,7 +92,6 @@ class DetailView(View):
             }
             return JsonResponse(data)
         except Exception as e:
-            print("------------e", e)
             data = {
                 "success": False,
                 "message": str(e)
@@ -137,12 +130,7 @@ class Index1(View):
     def post(self, request):
         account = request.POST.get("account")
         password = request.POST.get("password")
-        if not account or not password:
-            data = {
-                "success": False,
-                "message": "账号或密码为空",
-            }
-            return JsonResponse(data)
+
         try:
             user = User.objects.get(account=account)
         except User.DoesNotExist as e:
@@ -164,16 +152,8 @@ class Index1(View):
             "message": "账号密码正确",
             "account": [user.account, user.nickname],
         }
-        response = JsonResponse(data)
-        # 1、写session
-        request.session["account"] = user.account
-        print(request.session.get("account"))
-        token_value = str(uuid.uuid4())[:8]
-        response.set_cookie("token", token_value)
-        # 写缓存
-        cache.set(user.account, token_value, 60 * 60 * 24 * 7)
 
-        return response
+        return JsonResponse(data)
 
 
 class Index2(View):
@@ -185,10 +165,10 @@ class Index2(View):
         password = request.POST.get("password")
         nickname = request.POST.get("nickname")
         try:
-            user = User.objects.create(account=account,
-                                       password=password,
-                                       nickname=nickname,
-                                       cardNum=0)
+            User.objects.create(account=account,
+                                password=password,
+                                nickname=nickname,
+                                cardNum=0)
             data = {
                 "success": True,
                 "message": "注册成功",
@@ -217,97 +197,7 @@ class Index2(View):
             return JsonResponse(data)
 
 
-"""
-使用pillow模块：pip install pillow
-"""
-from PIL import Image, ImageDraw, ImageFont
-import random
-import io
-
-
-class Index3(View):
-    def get(self, request):
-        key = request.GET.get("key")  # register_code   login_code
-        print("----------------------key", key)
-        # 1 创建画面对象
-        width = 100
-        height = 50
-        bgcolor = (random.randrange(20, 100), random.randrange(20, 100), random.randrange(20, 100))
-        im = Image.new("RGB", (width, height), bgcolor)
-
-        # 2 创建画笔
-        draw = ImageDraw.Draw(im)
-
-        # 3 生成噪点
-        for i in range(0, 100):
-            # 绘制噪点
-            xy = (random.randrange(0, width), random.randrange(0, height))
-            fill = (random.randrange(0, 255), 255, random.randrange(0, 255))
-            # 参数1：点的位置
-            # 参数2：点的颜色
-            draw.point(xy, fill)
-
-        # 4 生成随机验证码
-        base_str = "1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPLKJHGFDSAZXCVBNM"
-        code_str = ""
-        for i in range(0, 4):
-            code_str += random.choice(base_str)
-        print("--------------code_str =", code_str)
-
-        # 5 构造字体对象
-        # 参数1：字体文件路径  C:\Windows\Fonts\AdobeArabic-Bold.otf
-        # 参数2：字体大小
-        font = ImageFont.truetype(r"C:\Users\李泽兴\AppData\Local\Microsoft\Windows\Fonts\AdobeArabic-Bold.otf", 40)
-
-        # 6 写入内容
-        # 参数1：位置
-        # 参数2：内容
-        # 参数font：字体
-        # 参数fill：颜色
-        draw.text((5, 2), code_str[0], font=font, fill=(255, random.randrange(0, 255), 255, random.randrange(0, 255)))
-        draw.text((25, 2), code_str[1], font=font, fill=(255, random.randrange(0, 255), 255, random.randrange(0, 255)))
-        draw.text((50, 2), code_str[2], font=font, fill=(255, random.randrange(0, 255), 255, random.randrange(0, 255)))
-        draw.text((75, 2), code_str[3], font=font, fill=(255, random.randrange(0, 255), 255, random.randrange(0, 255)))
-
-        # 7 释放
-        del draw
-
-        # 8 内存文件操作
-        buf = io.BytesIO()
-        im.save(buf, "png")
-
-        # 9 写入session
-        request.session[key] = code_str
-        print("Session Key:", request.session.session_key)
-        # 10 响应验证码数据
-        return HttpResponse(buf.getvalue(), "image/png")
-
-
 # GaoZeXu ------------------------------------------------------------------------------------------
-
-# 实现账户退出
-# -----------------------------gaozx
-class LogoutAccount(View):
-    def post(self, request):
-        try:
-            # 检查用户是否已经登录
-            if not request.user.is_authenticated:
-                return JsonResponse({'success': False, 'message': '您未登录'}, status=401)
-
-                # 执行登出操作
-            logout(request)
-
-            # 返回成功的响应
-            data = {
-                'success': True,
-                'message': '退出成功',
-            }
-            return JsonResponse(data)
-        except Exception as e:
-            # 添加适当的日志记录
-            print('Error in logout_account view:', str(e))
-            return JsonResponse({'success': False, 'message': '登出失败，请重试'}, status=500)
-
 
 class CheckIn(View):
     def get(self, request):
@@ -434,7 +324,7 @@ class AddCheck(View):
             account = request.POST.get("account")
             musicName = request.POST.get("musicName")
             cards = int(request.POST.get("piao"))
-            print("---------------",account,musicName,cards)
+            print("---------------", account, musicName, cards)
             user = User.objects.get(account=account)
             user.cardNum -= cards
             music = MusicList.objects.get(name=musicName)
@@ -444,12 +334,12 @@ class AddCheck(View):
             music.save()
             data = {
                 "success": True,
-                "info":music.callNum,
+                "info": music.callNum,
                 "error": None
             }
             return JsonResponse(data)
         except Exception as e:
-            print("-----------e",e)
+            print("-----------e", e)
             data = {
                 "success": True,
                 "error": e

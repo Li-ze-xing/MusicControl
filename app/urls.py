@@ -21,11 +21,8 @@ urlpatterns = [
     # YangFengYuan --------------------------------------------------------------------------------
     path("login/", views.Index1.as_view(), name="login"),
     path("enroll/", views.Index2.as_view(), name="enroll"),
-    path("code/", views.Index3.as_view(), name="code"),
 
     # GaoZeXu ------------------------------------------------------------------------------------------
-    # 退出登录
-    path('logout/', views.LogoutAccount.as_view(), name='logout'),
     # 签到
     path('check-in/', views.CheckIn.as_view(), name='check_in'),
     # 收藏歌曲
